@@ -1477,6 +1477,11 @@
    (contact/handle-qr-code cofx contact-identity)))
 
 (handlers/register-handler-fx
+ :contact/filters-added
+ (fn [cofx [_ contact-identity]]
+   (contact/add-contact-and-open-chat cofx contact-identity)))
+
+(handlers/register-handler-fx
  :contact.ui/start-group-chat-pressed
  (fn [{:keys [db] :as cofx} _]
    (contact/open-contact-toggle-list cofx)))

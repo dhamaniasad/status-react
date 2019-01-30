@@ -6,7 +6,8 @@
             [status-im.utils.fx :as fx]
             [status-im.utils.handlers :as handlers]
             [status-im.transport.partitioned-topic :as transport.topic]
-            [taoensso.timbre :as log]))
+            [taoensso.timbre :as log]
+            [status-im.contact.core :as contact]))
 
 (defn- receive-message [chat-id js-error js-message]
   (re-frame/dispatch [:transport/messages-received js-error js-message chat-id]))
@@ -74,9 +75,10 @@
 
 (handlers/register-handler-fx
  :shh.callback/filters-added
- (fn [cofx [_ filters]]
+ (fn [{:keys [db] :as cofx} [_ filters]]
    (log/debug "PERF" :shh.callback/filters-added)
-   (let [filters-fx-fns
+   (let [{:keys [action public-key]} (:filters/after-adding-discovery-filter db)
+         filters-fx-fns
          (mapcat
           (fn [{:keys [topic chat-id filter]}]
             [(add-filter chat-id filter)
@@ -84,8 +86,13 @@
                                                   :chat-id chat-id})])
           filters)]
      (apply fx/merge cofx
+            {:db (dissoc db :filters/after-adding-discovery-filter)}
             (mailserver/reset-request-to)
             (concat
+             [(when action
+                (case action
+                  :add-contact
+                  (contact/add-contact public-key)))]
              filters-fx-fns
              [(mailserver/process-next-messages-request)])))))
 
